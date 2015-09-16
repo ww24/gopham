@@ -1,3 +1,8 @@
+/**
+ * gopham
+ * go push message manager
+ */
+
 package main
 
 import (
@@ -20,17 +25,21 @@ type Message struct {
 // JSON is json type
 type JSON map[string]interface{}
 
+// websocket connection manager
 func connectionManager() (connAdd, connDel chan *websocket.Conn, connSafe func(func([]*websocket.Conn))) {
 	connections := make([]*websocket.Conn, 0, 100)
 	connAdd = make(chan *websocket.Conn, 1)
 	connDel = make(chan *websocket.Conn, 1)
 	mutex := new(sync.Mutex)
+
+	// safety connections getter
 	connSafe = func(f func([]*websocket.Conn)) {
 		defer mutex.Unlock()
 		mutex.Lock()
 		f(connections)
 	}
 
+	// watch add event
 	go func() {
 		for {
 			func() {
@@ -44,6 +53,7 @@ func connectionManager() (connAdd, connDel chan *websocket.Conn, connSafe func(f
 		}
 	}()
 
+	// watch delete event
 	go func() {
 		for {
 			func() {
@@ -65,6 +75,7 @@ func connectionManager() (connAdd, connDel chan *websocket.Conn, connSafe func(f
 	return
 }
 
+// websocket end point
 func ws() (connSafe func(func([]*websocket.Conn))) {
 	connAdd, connDel, connSafe := connectionManager()
 
@@ -97,6 +108,7 @@ func ws() (connSafe func(func([]*websocket.Conn))) {
 }
 
 func main() {
+	// websocket route
 	connSafe := ws()
 
 	gin.SetMode(gin.ReleaseMode)
@@ -106,11 +118,12 @@ func main() {
 		ctx.String(200, "%s\n", "gopham works")
 	})
 
+	// post message
 	engine.POST("/", func(ctx *gin.Context) {
 		message := new(Message)
 		err := ctx.BindJSON(message)
 		if err != nil {
-			ctx.JSON(500, gin.H{
+			ctx.JSON(400, gin.H{
 				"status": "ng",
 				"error":  err.Error(),
 			})
@@ -132,22 +145,27 @@ func main() {
 			"data":    message.Data,
 		}
 
+		connectionLen := 0
 		// broadcast message
 		connSafe(func(connections []*websocket.Conn) {
 			for _, ws := range connections {
 				websocket.JSON.Send(ws, data)
 			}
+			connectionLen = len(connections)
 		})
 
 		ctx.JSON(200, gin.H{
-			"status":  "ok",
-			"message": data,
+			"status":      "ok",
+			"connections": connectionLen,
+			"message":     data,
 		})
 	})
 
+	// static & middleware route
 	engine.Static("/static", "static")
 	engine.Use(gin.WrapH(http.DefaultServeMux))
 
+	// listen
 	log.Println("gopham server started.")
 	err := engine.Run(":3000")
 	if err != nil {

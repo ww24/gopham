@@ -49,3 +49,9 @@ message list はクライアントが接続時に受け取ります。
 
 #### data [required]
 任意の JSON 形式
+
+### Example
+```
+curl 'http://localhost:3000/' --verbose --request POST --header 'Content-Type: application/json' \
+--data-binary '{"channel":"test", "data":{"message":"json"}}'
+```
