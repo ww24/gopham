@@ -9,3 +9,8 @@ type Message struct {
 
 // JSON is json type
 type JSON map[string]interface{}
+
+// Connection interface
+type Connection interface {
+	Send(data JSON) (err error)
+}

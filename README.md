@@ -18,7 +18,7 @@ Usage
 -----
 
 ### WS /subscribe
-WebSocket entry point `/subscribe`.
+WebSocket endpoint `/subscribe`.
 
 ### POST /
 Request body (JSON)
@@ -51,6 +51,12 @@ message list はクライアントが接続時に受け取ります。
 任意の JSON 形式
 
 ### Example
+#### Subscribe (Server-Sent Events Endpoint)
+```
+curl 'http://localhost:3000/sse' --verbose
+```
+
+#### Post message
 ```
 curl 'http://localhost:3000/' --verbose --request POST --header 'Content-Type: application/json' \
 --data-binary '{"channel":"test", "data":{"message":"json"}}'

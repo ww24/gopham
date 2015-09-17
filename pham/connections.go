@@ -6,56 +6,48 @@ import (
 )
 
 var (
-	connAdd = make(chan Connection, 1)
-	connDel = make(chan Connection, 1)
+	connAdd  = make(chan Connection, 1)
+	connDel  = make(chan Connection, 1)
+	connSafe func(func([]Connection))
 )
 
-// Connection interface
-type Connection interface {
-	Send(data JSON) (err error)
-}
-
 // ConnectionManager is websocket connection manager
-func ConnectionManager() (cAdd, cDel chan Connection, connSafe func(func([]Connection))) {
+func ConnectionManager() (cAdd, cDel chan<- Connection, connSafe func(func([]Connection))) {
 	connections := make([]Connection, 0, 100)
 	cAdd = connAdd
 	cDel = connDel
-	mutex := new(sync.Mutex)
-
+	connMutex := new(sync.Mutex)
 	// safety connections getter
 	connSafe = func(f func([]Connection)) {
-		defer mutex.Unlock()
-		mutex.Lock()
+		defer connMutex.Unlock()
+		connMutex.Lock()
 		f(connections)
 	}
 
-	// watch add event
+	// watch add & delete event
 	go func() {
 		for {
 			func() {
-				conn := <-connAdd
-				log.Println("server: new connection")
-				mutex.Lock()
-				defer mutex.Unlock()
-				connections = append(connections, conn)
-				log.Println("connections:", len(connections))
-			}()
-		}
-	}()
+				select {
+				case conn := <-connAdd:
+					log.Println("server: new connection")
+					connMutex.Lock()
+					defer connMutex.Unlock()
 
-	// watch delete event
-	go func() {
-		for {
-			func() {
-				conn := <-connDel
-				log.Println("server: connection closed")
-				mutex.Lock()
-				defer mutex.Unlock()
-				for i, ws := range connections {
-					if ws == conn {
-						connections = append(connections[:i], connections[i+1:]...)
-						log.Println("connections:", len(connections))
-						break
+					connections = append(connections, conn)
+					log.Println("connections:", len(connections))
+
+				case conn := <-connDel:
+					log.Println("server: connection closed")
+					connMutex.Lock()
+					defer connMutex.Unlock()
+
+					for i, ws := range connections {
+						if ws == conn {
+							connections = append(connections[:i], connections[i+1:]...)
+							log.Println("connections:", len(connections))
+							break
+						}
 					}
 				}
 			}()

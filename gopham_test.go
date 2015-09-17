@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ww24/gopham/pham"
+
 	"golang.org/x/net/websocket"
 )
 
@@ -20,7 +22,7 @@ func TestWebSocket(t *testing.T) {
 
 	cli := client()
 
-	ch := make(chan bool)
+	ch := make(chan bool, 1)
 	go func() {
 		msg := make([]byte, 512)
 		size, err := ws.Read(msg)
@@ -40,9 +42,9 @@ func TestWebSocket(t *testing.T) {
 }
 
 func send(ws *websocket.Conn) {
-	msg := JSON{
+	msg := pham.JSON{
 		"channel": "test",
-		"data": JSON{
+		"data": pham.JSON{
 			"type": "ping",
 		},
 	}

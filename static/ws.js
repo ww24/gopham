@@ -2,16 +2,16 @@ var url = "ws://localhost:3000/subscribe";
 
 var ws = new WebSocket(url);
 ws.addEventListener("open", function (e) {
-  console.log("open:", e);
+  console.log("ws:open:", e);
 });
 ws.addEventListener("close", function (e) {
-  console.log("close:", e);
+  console.log("ws:close:", e);
 });
 ws.addEventListener("message", function (e) {
-  console.log("message:", e.data);
+  console.log("ws:message:", e.data);
 });
 ws.addEventListener("error", function (e) {
-  console.error(e);
+  console.error("ws:error", e);
 });
 
 function send(data) {

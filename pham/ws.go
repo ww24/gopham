@@ -44,6 +44,7 @@ func WS() {
 				}
 			}),
 		}
+		w.WriteHeader(101)
 		s.ServeHTTP(w, r)
 	})
 }

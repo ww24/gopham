@@ -13,7 +13,9 @@ import (
 	"github.com/ww24/gopham/pham"
 )
 
-var connAdd, connDel, connSafe = pham.ConnectionManager()
+var (
+	connAdd, connDel, connSafe = pham.ConnectionManager()
+)
 
 func main() {
 	// websocket route
@@ -25,6 +27,8 @@ func main() {
 	engine.GET("/", func(ctx *gin.Context) {
 		ctx.String(200, "%s\n", "gopham works")
 	})
+
+	engine.GET("/sse", pham.SSEHandler)
 
 	// post message
 	engine.POST("/", func(ctx *gin.Context) {
