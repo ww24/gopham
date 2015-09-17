@@ -34,8 +34,9 @@ func SSEHandler(ctx *gin.Context) {
 	// watch close connection event
 	closer := ctx.Writer.CloseNotify()
 	for {
-		if <-closer {
-			break
+		select {
+		case <-closer:
+			return
 		}
 	}
 }

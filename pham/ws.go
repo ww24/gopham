@@ -1,6 +1,7 @@
 package pham
 
 import (
+	"io"
 	"log"
 	"net/http"
 
@@ -36,9 +37,14 @@ func WS() {
 				for {
 					// receive message
 					message := new(Message)
-					websocket.JSON.Receive(ws, message)
-					if message.Channel == "" && message.TTL == 0 && message.Data == nil {
-						return
+					err := websocket.JSON.Receive(ws, message)
+					if err != nil {
+						// close event
+						if err == io.EOF {
+							return
+						}
+
+						log.Println(err)
 					}
 					log.Printf("client: %#v\n", message)
 				}
