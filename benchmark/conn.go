@@ -70,6 +70,7 @@ func sseCli(url string) (ch chan bool) {
 		go func() {
 			ch <- true
 		}()
+		log.Println("sse: connection failure")
 		panic(err)
 	}
 
@@ -111,7 +112,7 @@ func wsCli(url string) (ch chan bool) {
 		go func() {
 			ch <- true
 		}()
-		log.Println("connection failure")
+		log.Println("ws: connection failure")
 		panic(err)
 	}
 
