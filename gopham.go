@@ -28,7 +28,7 @@ func main() {
 		ctx.String(200, "%s\n", "gopham works")
 	})
 
-	engine.GET("/sse", pham.SSEHandler)
+	engine.GET("/sse", gin.WrapF(pham.SSEHandler))
 
 	// post message
 	engine.POST("/", func(ctx *gin.Context) {

@@ -1,22 +1,44 @@
 package pham
 
-import "github.com/gin-gonic/gin"
+import (
+	"encoding/json"
+	"io"
+	"log"
+	"net/http"
+)
 
 // ServerSentEventsConnection structure
 type ServerSentEventsConnection struct {
-	ctx *gin.Context
+	w *http.ResponseWriter
 }
 
 // Send implemented Connection interface
 func (sse *ServerSentEventsConnection) Send(data JSON) (err error) {
-	sse.ctx.SSEvent("message", data)
-	sse.ctx.Writer.Flush()
+	w := *sse.w
+
+	// encode json
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		io.WriteString(w, "data: {\"status\": \"ng\", \"error\":"+err.Error()+"}\n")
+		return
+	}
+
+	// send data
+	io.WriteString(w, `event: message
+data: `+string(bytes)+"\n\n")
+
+	// flush data
+	if flusher, ok := w.(http.Flusher); ok {
+		log.Println("flush")
+		flusher.Flush()
+	}
+
 	return
 }
 
 // SSEHandler for gin framework route handler
-func SSEHandler(ctx *gin.Context) {
-	connection := &ServerSentEventsConnection{ctx: ctx}
+func SSEHandler(w http.ResponseWriter, r *http.Request) {
+	connection := &ServerSentEventsConnection{w: &w}
 	// add connection
 	connAdd <- connection
 
@@ -26,14 +48,24 @@ func SSEHandler(ctx *gin.Context) {
 	}()
 
 	// set sse header
-	ctx.Header("Content-Type", "text/event-stream")
-	ctx.Header("Cache-Control", "no-cache")
-	ctx.Header("Connection", "keep-alive")
-	ctx.Header("Access-Control-Allow-Origin", "*")
-	ctx.Writer.Flush()
+	header := w.Header()
+	header.Set("Content-Type", "text/event-stream")
+	header.Set("Cache-Control", "no-cache")
+	header.Set("Connection", "keep-alive")
+	header.Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(200)
+
+	// flush header
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
 
 	// watch close connection event
-	closer := ctx.Writer.CloseNotify()
+	var closer <-chan bool
+	if notifier, ok := w.(http.CloseNotifier); ok {
+		closer = notifier.CloseNotify()
+	}
+
 	for {
 		select {
 		case <-closer:
