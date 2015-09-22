@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/ww24/gopham/pham"
 
@@ -11,16 +15,14 @@ import (
 )
 
 func TestWebSocket(t *testing.T) {
-	go main()
-	time.Sleep(time.Second * 2)
+	ts := httptest.NewServer(NewHandler())
+	defer ts.Close()
 
-	ws, err := websocket.Dial("ws://localhost:3000/subscribe", "", "http://localhost/")
+	ws, err := websocket.Dial("ws://"+ts.Listener.Addr().String()+"/subscribe", "", "http://localhost/")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer ws.Close()
-
-	cli := client()
 
 	ch := make(chan bool, 1)
 	go func() {
@@ -29,54 +31,47 @@ func TestWebSocket(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		log.Println("test1:", size, string(msg[:size]))
+		log.Println("TestWebSocket:", size, string(msg[:size]))
 
 		ch <- true
 	}()
 
-	send(ws)
-	send(ws)
-
-	<-ch
-	<-cli
-}
-
-func send(ws *websocket.Conn) {
-	msg := pham.JSON{
+	res, err := post(ts.URL, pham.JSON{
 		"channel": "test",
 		"data": pham.JSON{
 			"type": "ping",
 		},
-	}
-	err := websocket.JSON.Send(ws, msg)
+	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
+	log.Println("TestWebSocket:", res)
+
+	<-ch
 }
 
-func client() (ch chan bool) {
-	ch = make(chan bool, 1)
+func TestServerSentEvents(t *testing.T) {
 
-	ws, err := websocket.Dial("ws://localhost:3000/subscribe", "", "http://localhost/")
+}
+
+func post(url string, data pham.JSON) (str string, err error) {
+	jsonb, err := json.Marshal(data)
 	if err != nil {
-		panic(err)
+		return
 	}
 
-	go func() {
-		defer ws.Close()
+	buf := bytes.NewBuffer(jsonb)
+	res, err := http.Post(url, "application/json", buf)
+	if err != nil {
+		return
+	}
+	defer res.Body.Close()
 
-		msg := make([]byte, 512)
-		size, err := ws.Read(msg)
-		if err != nil {
-			panic(err)
-		}
-		log.Println("test2:", size, string(msg[:size]))
-
-		ch <- true
-	}()
-
-	send(ws)
-	send(ws)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return
+	}
+	str = string(body)
 
 	return
 }

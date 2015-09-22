@@ -6,7 +6,15 @@
 package main
 
 import (
+	"flag"
 	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ww24/gopham/pham"
@@ -17,20 +25,62 @@ var (
 )
 
 func main() {
-	gin.SetMode(gin.ReleaseMode)
-	engine := gin.Default()
+	port := flag.Int("port", 3000, "Set port number.")
+	modes := []string{gin.DebugMode, gin.ReleaseMode, gin.TestMode}
+	mode := flag.String("mode", gin.ReleaseMode, "Set Gin Web Framework mode. ["+strings.Join(modes, " or ")+"]")
+	flag.Parse()
 
-	engine.GET("/", func(ctx *gin.Context) {
+	gin.SetMode(*mode)
+	listener, errch := Serve(":"+strconv.Itoa(*port), NewHandler())
+
+	go func() {
+		sig := make(chan os.Signal)
+		signal.Notify(sig, syscall.SIGINT)
+		for {
+			select {
+			case s := <-sig:
+				log.Println(s)
+				listener.Close()
+			}
+		}
+	}()
+
+	log.Println("gopham server started at", listener.Addr())
+	log.Println("error:", <-errch)
+}
+
+// Serve is server bootstrap
+func Serve(addr string, router http.Handler) (listener net.Listener, errch <-chan error) {
+	ch := make(chan error)
+	errch = ch
+
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		ch <- err
+	}
+
+	go func() {
+		ch <- http.Serve(listener, router)
+	}()
+
+	return
+}
+
+// NewHandler is return http.Handler
+func NewHandler() http.Handler {
+	router := gin.Default()
+
+	router.GET("/", func(ctx *gin.Context) {
 		ctx.String(200, "%s\n", "gopham works")
 	})
 
 	// Server-Sent Events
-	engine.GET("/sse", gin.WrapF(pham.SSEHandler))
+	router.GET("/sse", gin.WrapF(pham.SSEHandler))
 	// WebSocket
-	engine.GET("/subscribe", gin.WrapF(pham.WSHandler))
+	router.GET("/subscribe", gin.WrapF(pham.WSHandler))
 
 	// post message
-	engine.POST("/", func(ctx *gin.Context) {
+	router.POST("/", func(ctx *gin.Context) {
 		message := new(pham.Message)
 		err := ctx.BindJSON(message)
 		if err != nil {
@@ -73,12 +123,7 @@ func main() {
 	})
 
 	// static & middleware route
-	engine.Static("/static", "static")
+	router.Static("/static", "static")
 
-	// listen
-	log.Println("gopham server started.")
-	err := engine.Run(":3000")
-	if err != nil {
-		panic(err)
-	}
+	return router
 }
