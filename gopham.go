@@ -7,7 +7,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ww24/gopham/pham"
@@ -18,9 +17,6 @@ var (
 )
 
 func main() {
-	// websocket route
-	pham.WS()
-
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.Default()
 
@@ -28,7 +24,10 @@ func main() {
 		ctx.String(200, "%s\n", "gopham works")
 	})
 
+	// Server-Sent Events
 	engine.GET("/sse", gin.WrapF(pham.SSEHandler))
+	// WebSocket
+	engine.GET("/subscribe", gin.WrapF(pham.WSHandler))
 
 	// post message
 	engine.POST("/", func(ctx *gin.Context) {
@@ -75,7 +74,6 @@ func main() {
 
 	// static & middleware route
 	engine.Static("/static", "static")
-	engine.Use(gin.WrapH(http.DefaultServeMux))
 
 	// listen
 	log.Println("gopham server started.")

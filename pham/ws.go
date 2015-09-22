@@ -19,38 +19,35 @@ func (wc *WebSocketConnection) Send(data JSON) (err error) {
 	return
 }
 
-// WS is websocket end point
-func WS() {
-	http.HandleFunc("/subscribe", func(w http.ResponseWriter, r *http.Request) {
-		s := websocket.Server{Handler: websocket.Handler(
-			func(ws *websocket.Conn) {
-				connection := &WebSocketConnection{ws: ws}
+// WSHandler is websocket end point
+func WSHandler(w http.ResponseWriter, r *http.Request) {
+	s := websocket.Server{Handler: websocket.Handler(
+		func(ws *websocket.Conn) {
+			connection := &WebSocketConnection{ws: ws}
 
-				// add connection
-				connAdd <- connection
+			// add connection
+			connAdd <- connection
 
-				defer func() {
-					// delete connection
-					connDel <- connection
-				}()
+			defer func() {
+				// delete connection
+				connDel <- connection
+			}()
 
-				for {
-					// receive message
-					message := new(Message)
-					err := websocket.JSON.Receive(ws, message)
-					if err != nil {
-						// close event
-						if err == io.EOF {
-							return
-						}
-
-						log.Println(err)
+			for {
+				// receive message
+				message := new(Message)
+				err := websocket.JSON.Receive(ws, message)
+				if err != nil {
+					// close event
+					if err == io.EOF {
+						return
 					}
-					log.Printf("client: %#v\n", message)
+
+					log.Println(err)
 				}
-			}),
-		}
-		w.WriteHeader(101)
-		s.ServeHTTP(w, r)
-	})
+				log.Printf("client: %#v\n", message)
+			}
+		}),
+	}
+	s.ServeHTTP(w, r)
 }
