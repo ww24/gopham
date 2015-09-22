@@ -12,7 +12,7 @@ go get
 go run gopham.go
 ```
 
-Open [localhost:3000](http://localhost:3000/) on your browser.
+Open [localhost:3000/static](http://localhost:3000/static/) on your browser.
 
 Usage
 -----
