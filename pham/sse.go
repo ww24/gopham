@@ -19,7 +19,7 @@ func (sse *ServerSentEventsConnection) Send(data JSON) (err error) {
 	// encode json
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		io.WriteString(w, "data: {\"status\": \"ng\", \"error\":"+err.Error()+"}\n")
+		io.WriteString(w, `data: {"status": "ng", "error":`+err.Error()+`}\n`)
 		return
 	}
 
