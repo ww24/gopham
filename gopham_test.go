@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/ww24/gopham/pham"
+	"github.com/ww24/gopham/pham/client"
 
 	"golang.org/x/net/websocket"
 )
@@ -31,11 +32,12 @@ func TestWebSocket(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		log.Println("TestWebSocket:", size, string(msg[:size]))
+		log.Println("TestWebSocket:received:", size, string(msg[:size]))
 
 		ch <- true
 	}()
 
+	// send realtime message
 	res, err := post(ts.URL, pham.JSON{
 		"channel": "test",
 		"data": pham.JSON{
@@ -45,13 +47,42 @@ func TestWebSocket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Println("TestWebSocket:", res)
+	log.Println("TestWebSocket:sent:", res)
 
 	<-ch
 }
 
 func TestServerSentEvents(t *testing.T) {
+	ts := httptest.NewServer(NewHandler())
+	defer ts.Close()
 
+	cli, err := client.NewSSEClient(ts.URL + "/sse")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cli.Close()
+
+	ch := make(chan bool, 1)
+	go func() {
+		data := <-cli.Listener
+		log.Println("TestServerSentEvents:received:", data)
+
+		ch <- true
+	}()
+
+	// send realtime message
+	res, err := post(ts.URL, pham.JSON{
+		"channel": `test`,
+		"data": pham.JSON{
+			"type": "ping",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println("TestServerSentEvents:sent:", res)
+
+	<-ch
 }
 
 func post(url string, data pham.JSON) (str string, err error) {
