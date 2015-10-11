@@ -14,8 +14,8 @@ type WebSocketConnection struct {
 }
 
 // Send implemented Connection interface
-func (wc *WebSocketConnection) Send(data JSON) (err error) {
-	err = websocket.JSON.Send(wc.ws, data)
+func (wc *WebSocketConnection) Send(data []byte) (err error) {
+	_, err = wc.ws.Write(data)
 	return
 }
 

@@ -12,5 +12,5 @@ type JSON map[string]interface{}
 
 // Connection interface
 type Connection interface {
-	Send(data JSON) (err error)
+	Send(data []byte) (err error)
 }

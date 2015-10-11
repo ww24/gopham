@@ -6,6 +6,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"net"
@@ -81,14 +82,20 @@ func NewHandler() http.Handler {
 
 	// post message
 	router.POST("/", func(ctx *gin.Context) {
+		defer func() {
+			cause := recover()
+			if cause != nil {
+				ctx.JSON(400, gin.H{
+					"status": "ng",
+					"error":  cause.(error).Error(),
+				})
+			}
+		}()
+
 		message := new(pham.Message)
 		err := ctx.BindJSON(message)
 		if err != nil {
-			ctx.JSON(400, gin.H{
-				"status": "ng",
-				"error":  err.Error(),
-			})
-			return
+			panic(err)
 		}
 
 		if message.Channel == "" || message.Data == nil {
@@ -106,14 +113,40 @@ func NewHandler() http.Handler {
 			"data":    message.Data,
 		}
 
+		// encode json
+		bytes, err := json.Marshal(data)
+		if err != nil {
+			panic(err)
+		}
+
 		connectionLen := 0
 		// broadcast message
 		connSafe(func(connections []pham.Connection) {
-			for _, connection := range connections {
-				connection.Send(data)
-			}
+			defer func() {
+				cause := recover()
+				if cause != nil {
+					err = cause.(error)
+				}
+			}()
+
 			connectionLen = len(connections)
+			for _, connection := range connections {
+				err := connection.Send(bytes)
+				if err != nil {
+					panic(err)
+				}
+			}
 		})
+
+		if err != nil {
+			ctx.JSON(500, gin.H{
+				"status":      "ng",
+				"error":       err.Error(),
+				"connections": connectionLen,
+				"message":     data,
+			})
+			return
+		}
 
 		ctx.JSON(200, gin.H{
 			"status":      "ok",

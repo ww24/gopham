@@ -1,9 +1,7 @@
 package pham
 
 import (
-	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -13,23 +11,15 @@ type ServerSentEventsConnection struct {
 }
 
 // Send implemented Connection interface
-func (sse *ServerSentEventsConnection) Send(data JSON) (err error) {
+func (sse *ServerSentEventsConnection) Send(data []byte) (err error) {
 	w := *sse.w
-
-	// encode json
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		io.WriteString(w, `data: {"status": "ng", "error":`+err.Error()+`}\n`)
-		return
-	}
 
 	// send data
 	io.WriteString(w, `event: message
-data: `+string(bytes)+"\n\n")
+data: `+string(data)+"\n\n")
 
 	// flush data
 	if flusher, ok := w.(http.Flusher); ok {
-		log.Println("flush")
 		flusher.Flush()
 	}
 
@@ -39,13 +29,6 @@ data: `+string(bytes)+"\n\n")
 // SSEHandler for gin framework route handler
 func SSEHandler(w http.ResponseWriter, r *http.Request) {
 	connection := &ServerSentEventsConnection{w: &w}
-	// add connection
-	connAdd <- connection
-
-	defer func() {
-		// delete connection
-		connDel <- connection
-	}()
 
 	// set sse header
 	header := w.Header()
@@ -59,6 +42,13 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
 	}
+
+	// add connection
+	connAdd <- connection
+	defer func() {
+		// delete connection
+		connDel <- connection
+	}()
 
 	// watch close connection event
 	var closer <-chan bool
