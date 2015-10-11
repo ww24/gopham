@@ -8,13 +8,13 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-// WebSocketConnection structure
-type WebSocketConnection struct {
+// webSocketConnection structure
+type webSocketConnection struct {
 	ws *websocket.Conn
 }
 
 // Send implemented Connection interface
-func (wc *WebSocketConnection) Send(data []byte) (err error) {
+func (wc *webSocketConnection) Send(data []byte) (err error) {
 	_, err = wc.ws.Write(data)
 	return
 }
@@ -23,14 +23,13 @@ func (wc *WebSocketConnection) Send(data []byte) (err error) {
 func WSHandler(w http.ResponseWriter, r *http.Request) {
 	s := websocket.Server{Handler: websocket.Handler(
 		func(ws *websocket.Conn) {
-			connection := &WebSocketConnection{ws: ws}
+			connection := &webSocketConnection{ws: ws}
 
 			// add connection
-			connAdd <- connection
-
+			manager.AddConnection(connection)
 			defer func() {
 				// delete connection
-				connDel <- connection
+				manager.DelConnection(connection)
 			}()
 
 			for {

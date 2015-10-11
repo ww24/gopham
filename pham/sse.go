@@ -5,13 +5,13 @@ import (
 	"net/http"
 )
 
-// ServerSentEventsConnection structure
-type ServerSentEventsConnection struct {
+// serverSentEventsConnection structure
+type serverSentEventsConnection struct {
 	w *http.ResponseWriter
 }
 
 // Send implemented Connection interface
-func (sse *ServerSentEventsConnection) Send(data []byte) (err error) {
+func (sse *serverSentEventsConnection) Send(data []byte) (err error) {
 	w := *sse.w
 
 	// send data
@@ -28,7 +28,7 @@ data: `+string(data)+"\n\n")
 
 // SSEHandler for gin framework route handler
 func SSEHandler(w http.ResponseWriter, r *http.Request) {
-	connection := &ServerSentEventsConnection{w: &w}
+	connection := &serverSentEventsConnection{w: &w}
 
 	// set sse header
 	header := w.Header()
@@ -44,10 +44,10 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add connection
-	connAdd <- connection
+	manager.AddConnection(connection)
 	defer func() {
 		// delete connection
-		connDel <- connection
+		manager.DelConnection(connection)
 	}()
 
 	// watch close connection event
