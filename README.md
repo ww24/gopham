@@ -1,6 +1,9 @@
 gopham
 ======
 
+[![Build Status][travis-img]][travis-url]
+[![Coverage Status][coveralls-img]][coveralls-url]
+
 Push message Manager
 
 It is like Google Cloud Messaging.
@@ -64,3 +67,16 @@ curl 'http://localhost:3000/sse' --verbose
 curl 'http://localhost:3000/' --verbose --request POST --header 'Content-Type: application/json' \
 --data-binary '{"channel":"test", "data":{"message":"json"}}'
 ```
+
+Download
+--------
+[Releases](https://github.com/ww24/gopham/releases)
+
+LICENSE
+-------
+[MIT](LICENSE)
+
+[travis-url]: https://travis-ci.org/ww24/gopham
+[travis-img]: https://api.travis-ci.org/ww24/gopham.svg
+[coveralls-url]: https://coveralls.io/github/ww24/gopham?branch=master
+[coveralls-img]: https://coveralls.io/repos/ww24/gopham/badge.svg?branch=master&service=github

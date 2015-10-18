@@ -13,6 +13,7 @@ script:
   - go test -v -covermode=count -coverprofile=coverage.out
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
 before_deploy:
+  - go get github.com/mattn/go-isatty
   - gox -output dist/{{.OS}}_{{.Arch}}/{{.Dir}}
   - find dist -name "*_*" -type d -exec cp -R static {} \;
   - find dist -name "*_*" -type d -exec zip -r {}".zip" {}"/" \;

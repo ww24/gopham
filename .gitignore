@@ -2,4 +2,7 @@
 !.gitignore
 
 gopham
+dist
 *.log
+
+!.travis.yml
