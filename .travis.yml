@@ -1,0 +1,31 @@
+language: go
+go:
+  - tip
+env:
+  - "PATH=/home/travis/gopath/bin:$PATH"
+before_install:
+  - go get github.com/mitchellh/gox
+  - go get github.com/tcnksm/ghr
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/mattn/goveralls
+  - go get golang.org/x/tools/cmd/cover
+script:
+  - go test -v -covermode=count -coverprofile=coverage.out
+  - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
+before_deploy:
+  - gox -output dist/{{.OS}}_{{.Arch}}/{{.Dir}}
+  - find dist -name "*_*" -type d -exec cp -R static {} \;
+  - find dist -name "*_*" -type d -exec zip -r {}".zip" {}"/" \;
+  - zip -r all-in-one.zip dist/*
+  - tar czf all-in-one.tar.gz dist/*
+deploy:
+  provider: releases
+  api_key: $GITHUB_TOKEN
+  file:
+    - all-in-one.zip
+    - all-in-one.tar.gz
+  skip_cleanup: true
+  on:
+    tags: true
+after_deploy:
+  - ghr --username $(echo $TRAVIS_REPO_SLUG | awk 'BEGIN{FS="/"}{print$1}') --token $GITHUB_TOKEN --replace $TRAVIS_TAG dist/
