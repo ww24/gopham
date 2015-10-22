@@ -1,4 +1,4 @@
-var url = "ws://localhost:3000/subscribe";
+var url = "ws://" + location.host + "/subscribe";
 
 var ws = new WebSocket(url);
 ws.addEventListener("open", function (e) {

@@ -1,4 +1,4 @@
-var url = "http://localhost:3000/sse";
+var url = "http://" + location.host + "/sse";
 
 var es = new EventSource(url);
 es.addEventListener("open", function (e) {
